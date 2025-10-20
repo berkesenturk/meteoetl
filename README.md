@@ -10,6 +10,6 @@ Author: Berke Sentürk
 - Processing: Batch (Xarray/Pandas/Spark), Streaming (Flink)
 - Storage: PostgreSQL/TimescaleDB
 - Visualization: Grafana/Kibana (setup optional)
-- Deployment: Docker Compose microservice stack
+- Deployment: Kubernetes, Docker Compose microservice stack
 
 firstly ensure that meteoetl works in terms of downloading data /raw (will be s3 in future)

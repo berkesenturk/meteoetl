@@ -10,9 +10,10 @@ Author: Berke Sentürk
 - Processing: Batch (Xarray/Pandas/Spark), Streaming (Flink)
 - Storage: PostgreSQL/TimescaleDB
 - Visualization: Grafana/Kibana (setup optional)
-- Deployment: Docker Compose microservice stack
+- Deployment: Kubernetes, Docker Compose microservice stack
 
 firstly ensure that meteoetl works in terms of downloading data /raw (will be s3 in future)
+<<<<<<< HEAD
 
 
 ### Airflow
@@ -31,3 +32,5 @@ Airflow offers centralized monitoring, alerting, and retry logic for each task i
 Many data use cases involve both real-time and batch processing. Airflow is ideal for managing scheduled jobs that run on data initially ingested by Kafka, such as nightly aggregates, data enrichment tasks, or bulk transfers for analytics, complementing Kafka's real-time strengths.[8][14][1]
 
 In summary, Airflow is needed to coordinate, schedule, and monitor ingestion and downstream workflows, enabling robust, maintainable, and extensible data pipelines that Kafka alone cannot provide.
+=======
+>>>>>>> b618626567e2d806a4fee7b9fb9e3ad7a4fe3b41

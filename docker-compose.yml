@@ -12,20 +12,24 @@ services:
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
 
   airflow-init:
-    image: apache/airflow:latest-python3.13
+    image: apache/airflow:2.8.3-python3.11
     depends_on:
       - postgres
     entrypoint: /bin/bash
+    environment:
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/meteoetl
+      - PYTHONPATH=/opt/airflow/data_ingestion:/opt/airflow/data_processing:/opt/airflow/streaming
+
     command:
       - -c
       - |
         airflow db migrate && airflow users create --username admin --password admin --firstname admin --lastname admin --role Admin --email admin@example.com
     volumes:
-      - ../airflow_dags:/opt/airflow/dags
-      - ../data_ingestion:/opt/airflow/data_ingestion
-      - ../data_processing:/opt/airflow/data_processing
-      - ../streaming:/opt/airflow/streaming
-      - ../database:/opt/airflow/database
+      - ./airflow_dags:/opt/airflow/dags
+      - ./data_ingestion:/opt/airflow/dags/data_ingestion
+      - ./data_processing:/opt/airflow/dags/data_processing
+      - ./streaming:/opt/airflow/dags/streaming
+      - ./database:/opt/airflow/dags/database
 
   airflow-webserver:
     build:
@@ -37,6 +41,8 @@ services:
     environment:
       - LOAD_EX=n
       - EXECUTOR=LocalExecutor
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/meteoetl
+      - PYTHONPATH=/opt/airflow/data_ingestion:/opt/airflow/data_processing:/opt/airflow/streaming
     entrypoint: /bin/bash
     command:
       - -c
@@ -46,11 +52,11 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ../airflow_dags:/opt/airflow/dags
-      - ../data_ingestion:/opt/airflow/data_ingestion
-      - ../data_processing:/opt/airflow/data_processing
-      - ../streaming:/opt/airflow/streaming
-      - ../database:/opt/airflow/database
+      - ./airflow_dags:/opt/airflow/dags
+      - ./data_ingestion:/opt/airflow/dags/data_ingestion
+      - ./data_processing:/opt/airflow/dags/data_processing
+      - ./streaming:/opt/airflow/dags/streaming
+      - ./database:/opt/airflow/dags/database
 
   airflow-scheduler:
     build:
@@ -62,6 +68,8 @@ services:
     environment:
       - LOAD_EX=n
       - EXECUTOR=LocalExecutor
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/meteoetl
+      - PYTHONPATH=/opt/airflow/data_ingestion:/opt/airflow/data_processing:/opt/airflow/streaming
     entrypoint: /bin/bash
     command:
       - -c
@@ -69,11 +77,11 @@ services:
         airflow db migrate || true
         exec airflow scheduler
     volumes:
-      - ../airflow_dags:/opt/airflow/dags
-      - ../data_ingestion:/opt/airflow/data_ingestion
-      - ../data_processing:/opt/airflow/data_processing
-      - ../streaming:/opt/airflow/streaming
-      - ../database:/opt/airflow/database
+      - ./airflow_dags:/opt/airflow/dags
+      - ./data_ingestion:/opt/airflow/dags/data_ingestion
+      - ./data_processing:/opt/airflow/dags/data_processing
+      - ./streaming:/opt/airflow/dags/streaming
+      - ./database:/opt/airflow/dags/database
 
   grafana:
     image: grafana/grafana:10.2.1
@@ -102,24 +110,56 @@ services:
     depends_on:
       - zookeeper
 
-  spark:
-    image: apache/spark:3.5.2
+  spark-master:
+    image: apache/spark:3.5.0
+    container_name: spark-master
+    hostname: spark-master
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
     environment:
       - SPARK_MODE=master
+      - SPARK_MASTER_HOST=spark-master
+      - SPARK_MASTER_PORT=7077
+      - SPARK_MASTER_WEBUI_PORT=8083
     ports:
-      - "7077:7077"
-      - "8081:8081"
+      - '8083:8083' # Master Web UI
+      - '7077:7077' # Master Port
     volumes:
-      - ../streaming:/opt/spark/streaming
-      - ../data_processing:/opt/spark/data_processing
+      - ./spark-apps:/opt/spark-apps
+      - ./spark-data:/opt/spark-data
 
-  flink:
-    image: apache/flink:1.17.2
+  spark-worker:
+    image: apache/spark:3.5.0
+    container_name: spark-worker
+    hostname: spark-worker
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
     environment:
-      - FLINK_MODE=jobmanager
+      - SPARK_WORKER_CORES=2
+      - SPARK_WORKER_MEMORY=2g
+      - SPARK_WORKER_WEBUI_PORT=8081
+    ports:
+      - '8081:8081' # Worker Web UI
+    depends_on:
+      - spark-master
+    volumes:
+      - ./spark-apps:/opt/spark-apps
+      - ./spark-data:/opt/spark-data
+
+
+  flink-jobmanager:
+    image: apache/flink:1.17.2
+    command: jobmanager
+    environment:
+      - JOB_MANAGER_RPC_ADDRESS=flink-jobmanager
     ports:
       - "8082:8081"
-    volumes:
-      - ../streaming:/opt/flink/streaming
     depends_on:
       - kafka
+
+  flink-taskmanager:
+    image: apache/flink:1.17.2
+    command: taskmanager
+    environment:
+      - JOB_MANAGER_RPC_ADDRESS=flink-jobmanager
+    depends_on:
+      - flink-jobmanager
+

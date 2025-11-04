@@ -1,7 +1,7 @@
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 from datetime import datetime, timedelta
-from data_ingestion.download_seviri import download_seviri
+from data_ingestion.download_seviri import query_and_download_seviri
 from data_processing.transform_xarray import process_seviri
 from database.db_loader import load_to_database
 
@@ -25,7 +25,7 @@ dag = DAG(
 
 download_task = PythonOperator(
     task_id='download_seviri_data',
-    python_callable=download_seviri,
+    python_callable=query_and_download_seviri,
     dag=dag
 )
 

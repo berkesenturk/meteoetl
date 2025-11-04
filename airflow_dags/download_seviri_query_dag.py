@@ -1,7 +1,7 @@
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 from datetime import datetime
-from data_ingestion.download_seviri_eumdac import query_and_download_seviri
+from data_ingestion.download_seviri import query_and_download_seviri
 
 BBOX = [4.3, 27.5, 22.4, 59.6]
 DOWNLOAD_DIR = "data/raw"

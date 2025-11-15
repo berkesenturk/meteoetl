@@ -1,3 +1,7 @@
+This is the place where I will note my development over the project.
+
+15.11.2025
+---------
 why master worker for some?
 should .env be used for security in docker compose env or sth else
 
